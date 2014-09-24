@@ -1,3 +1,4 @@
+#if 0
 #include <iostream>
 #include <stdio.h>
 #include <string.h>
@@ -58,3 +59,4 @@ int main(int argc, char *argv[])
 	device.Disconnect();
 	return 0;
 }
+#endif
