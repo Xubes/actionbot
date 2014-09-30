@@ -14,9 +14,14 @@
 using namespace std;
 
 // Named pipes.
-static string pipeL = "/tmp/pipeL";
-static string pipeR = "/tmp/pipeR";
-static string pipeC = "/tmp/pipeC";
+static string pnli = "/tmp/pipeli";
+static string pnri = "/tmp/piperi";
+static string pnci = "/tmp/pipeci";
+static string pnlo = "/tmp/pipelo";
+static string pnro = "/tmp/pipero";
+static string pnco = "/tmp/pipeco";
+ofstream pipeli, piperi, pipeci;
+ifstream pipelo, pipero, pipeco;
 
 // Roboteq Devices
 RoboteqDevice deviceLeft, deviceRight, deviceChair;
@@ -94,31 +99,19 @@ int main(int argc, char *argv[])
 		devnameChair = argv[3];
 	}
 
-#if 0
-	// Open pipes.
+
+	// Open output (to us) pipes.
+	pipeli.open(pnli);
+	piperi.open(pnri);
+	pipeci.open(pnci);
+
+	// Open input (to us) pipes.
 	cout << "Opening left pipe..." << endl;
-	int fidL[2];
-	open(devnameLeft.c_str(), O_RDONLY);
-	ifstream fifoL(pipeL, ios::in);
-	cout << "done" << endl;
-	if(fifoL.is_open()){
-		cout << "hi" << endl;
-		cerr << "Error opening left pipe\n" << strerror(errno) << endl;
-		return 1;
-	}
-	cout << "done.\nOpening right pipe..." << endl;
-	ifstream fifoR(pipeR,ios::in);
-	if(!fifoR.is_open()){
-		cerr << strerror(errno) << endl;
-		return 1;
-	}
-	cout <<"done.\nOpening chair pipe...";
-	ifstream fifoC(pipeC, ios::in);
-	if(fifoC.is_open()){
-		cerr << strerror(errno) << endl;
-	}
-	cout << "done.\n";
-#endif
+	pipelo.open(pnlo);
+	cout << "Opening right pipe..." << endl;
+	pipero.open(pnro);
+	cout << "Opening chair pipe..." << endl;
+	pipeco.open(pnco);
 
 	// Wait for 4 zeros from Processing
 	// Read in 4 zeros.
