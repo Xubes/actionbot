@@ -5,6 +5,7 @@
 #include <thread>
 #include <errno.h>
 #include <fcntl.h>
+#include <exception>
 
 
 #include "RoboteqDevice.h"
@@ -31,11 +32,11 @@ bool commandL(int cmd){
 		int result0 = deviceLeft.SetCommand(_GO,0,cmd);
 		int result1 = deviceLeft.SetCommand(_GO,1,cmd);
 		if(result0 != RQ_SUCCESS and result1 != RQ_SUCCESS){
-			throw(NULL);
+			throw(new runtime_error("Left motor exception on command %d" + to_string(cmd)));
 		}
 	}
 	catch(...){
-		cout << "command to left motor failed." << endl;
+		cout << "Command (" << cmd << ") to left motor failed." << endl;
 		return false;
 	}
 	return true;
@@ -46,30 +47,35 @@ bool commandR(int cmd){
 		int result0 = deviceRight.SetCommand(_GO,0,cmd);
 		int result1 = deviceRight.SetCommand(_GO,1,cmd);
 		if(result0 != RQ_SUCCESS and result1 != RQ_SUCCESS){
-			throw(NULL);
+			throw(new runtime_error("Right motor exception on command %d" + to_string(cmd)));
 		}
 	}
 	catch(...){
-		cout << "command to right motor failed." << endl;
+		cout << "Command (" << cmd << ") to right motor failed." << endl;
 		return false;
 	}
 	return true;
 }
 
+/* Send command to chair motor. */
 bool commandC(int cmd){
 	try{
 		int result0 = deviceChair.SetCommand(_GO,0,cmd);
-		int result1 = deviceChair.SetCommand(_GO,1,cmd);
-		if(result0 != RQ_SUCCESS and result1 != RQ_SUCCESS){
-			throw(NULL);
+		if(result0 != RQ_SUCCESS){
+			throw(new runtime_error("Chair motor exception on command %d" + to_string(cmd)));
 		}
 	}
+	catch(exception& e){
+		cout << e.what() << endl;
+	}
 	catch(...){
-		cout << "command to chair motor failed." << endl;
+		cout << "Command (" << cmd << ") to chair motor failed." << endl;
 		return false;
 	}
 	return true;
 }
+
+/* Disconnect motors if they are connected. */
 void disconnect(){
 	if(deviceLeft.IsConnected())
 		deviceLeft.Disconnect();
@@ -79,6 +85,15 @@ void disconnect(){
 		deviceChair.Disconnect();
 }
 
+/* Close input and output pipes. */
+void closePipes(){
+	pipeli.close();
+	piperi.close();
+	pipeci.close();
+	pipelo.close();
+	pipero.close();
+	pipeco.close();
+}
 int main(int argc, char *argv[])
 {
 	string response = "";
