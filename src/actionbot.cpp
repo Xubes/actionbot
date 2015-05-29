@@ -14,20 +14,10 @@
 
 using namespace std;
 
-// Named pipes.
-static string pnli = "/tmp/pipeli";
-static string pnri = "/tmp/piperi";
-static string pnci = "/tmp/pipeci";
-static string pnlo = "/tmp/pipelo";
-static string pnro = "/tmp/pipero";
-static string pnco = "/tmp/pipeco";
-ofstream pipeli, piperi, pipeci;
-ifstream pipelo, pipero, pipeco;
-
 // Roboteq Devices
 RoboteqDevice deviceLeft, deviceRight, deviceChair;
 
-bool commandL(int cmd){
+bool commandL(int cmd, int dur){
 	try{
 		int result0 = deviceLeft.SetCommand(_GO,0,cmd);
 		int result1 = deviceLeft.SetCommand(_GO,1,cmd);
@@ -42,7 +32,7 @@ bool commandL(int cmd){
 	return true;
 }
 
-bool commandR(int cmd){
+bool commandR(int cmd, int dur){
 	try{
 		int result0 = deviceRight.SetCommand(_GO,0,cmd);
 		int result1 = deviceRight.SetCommand(_GO,1,cmd);
@@ -58,19 +48,22 @@ bool commandR(int cmd){
 }
 
 /* Send command to chair motor. */
-bool commandC(int cmd){
-	try{
-		int result0 = deviceChair.SetCommand(_GO,0,cmd);
-		if(result0 != RQ_SUCCESS){
-			throw(new runtime_error("Chair motor exception on command %d" + to_string(cmd)));
+bool commandC(int cmd, int dur){
+	for(int i=0; i<dur; i+=10){
+		try{
+			int result0 = deviceChair.SetCommand(_GO,0,cmd);
+			if(result0 != RQ_SUCCESS){
+				throw(new runtime_error("Chair motor exception on command %d" + to_string(cmd)));
+			}
 		}
-	}
-	catch(exception& e){
-		cout << e.what() << endl;
-	}
-	catch(...){
-		cout << "Command (" << cmd << ") to chair motor failed." << endl;
-		return false;
+		catch(exception& e){
+			cout << e.what() << endl;
+		}
+		catch(...){
+			cout << "Command (" << cmd << ") to chair motor failed." << endl;
+			return false;
+		}
+		sleepms(10);
 	}
 	return true;
 }
@@ -85,23 +78,16 @@ void disconnect(){
 		deviceChair.Disconnect();
 }
 
-/* Close input and output pipes. */
-void closePipes(){
-	pipeli.close();
-	piperi.close();
-	pipeci.close();
-	pipelo.close();
-	pipero.close();
-	pipeco.close();
-}
 int main(int argc, char *argv[])
 {
+	int verbose = 1;
+
 	string response = "";
 
 	// Serial ports for the motors
-	string devnameLeft = "/dev/tty.usbmodem22";
-	string devnameRight = "/dev/tty.usbmodemRTQ0011";
-	string devnameChair = "/dev/tty.usbmodemfd1211";
+	string devnameLeft = "/dev/cu.usbmodem9";
+	string devnameRight = "/dev/cu.usbmodemRTQ0011";
+	string devnameChair = "/dev/cu.usbmodemfd1211";
 
 	// Assign new device names if they are available in the input
 	if(argc>1){
@@ -114,73 +100,68 @@ int main(int argc, char *argv[])
 		devnameChair = argv[3];
 	}
 
-
-	// Open output (to us) pipes.
-	pipeli.open(pnli);
-	piperi.open(pnri);
-	pipeci.open(pnci);
-
-	// Open input (to us) pipes.
-	cout << "Opening left pipe..." << endl;
-	pipelo.open(pnlo);
-	cout << "Opening right pipe..." << endl;
-	pipero.open(pnro);
-	cout << "Opening chair pipe..." << endl;
-	pipeco.open(pnco);
-
-	// Wait for 4 zeros from Processing
-	// Read in 4 zeros.
-	for(int i=1; i<=4; i++){
-		int jnk;
-		cin >> jnk;
+	if(verbose>0){
+		cout << "Opening left motor...";
 	}
-
-	cout << "Opening left motor...";
 	int status = deviceLeft.Connect(devnameLeft);
 	if(status != RQ_SUCCESS){
-		cout<<"Error connecting to device " << devnameLeft << ": "<<status<<"."<<endl;
-		return 1;
+		cerr<<"Error connecting to device " << devnameLeft << ": "<<status<<"."<<endl;
+		//return 1;
 	}
-	cout << "done.\nOpening right motor...";
+	if(verbose>0){
+		cout << "done.\nOpening right motor...";
+	}
 
 
 	status = deviceRight.Connect(devnameRight);
 	if(status != RQ_SUCCESS)
 	{
-		cout << "Error connecting to device " << devnameRight << ": " << status << "."<<endl;
-		return 1;
+		cerr << "Error connecting to device " << devnameRight << ": " << status << "."<<endl;
+		//return 1;
 	}
-	cout << "done.\nOpening chair motor...";
+	if(verbose>0){
+		cout << "done.\nOpening chair motor...";
+	}
 	status = deviceChair.Connect(devnameChair);
 	if(status != RQ_SUCCESS){
-		cout << "Error connecting to device " << devnameChair << ": " << status << "."<<endl;
-		return 1;
+		cerr << "Error connecting to device " << devnameChair << ": " << status << "."<<endl;
+		//return 1;
 	}
-	cout << "done.\n";
+	if(verbose>0){
+		cout << "done.\n";
+	}
 
 	// Read in input from cin and process commands out to devices.
 	while(1){
-		cout << "Enter command: <device> <[-999,999]." << endl;
+		if(verbose>0){
+			cout << "Enter command: <device> <[-999,999]> <duration>." << endl;
+		}
 
-
-		string devs, cmds;
+		string devs, cmds, durs;
 		cin >> devs;
 		cin >> cmds;
-		int devi, cmdi;
+		cin >> durs;
+		int devi, cmdi, duri;
 		try{
 			devi = stoi(devs);
 			cmdi = stoi(cmds);
+			duri = stoi(durs);
 		}
 		catch(...){
-			printf("Read: %s,%s\n",devs.c_str(),cmds.c_str());
-			devi = -1;
-			cmdi = -1;
+			if(verbose>0){
+				printf("Failed to parse: %s,%s,%s\n",devs.c_str(),cmds.c_str(),durs.c_str());
+			}
+			continue;
+			//devi = -1;
+			//cmdi = -1;
 		}
 
-		cout << "Read : " << devi << "," << cmdi << endl;
+		if(verbose>0){
+			cout << "Read : " << devi << "," << cmdi << "," << duri << endl;
+		}
 
 
-		if(not( (devi>= -2 && devi<=3) and (abs(cmdi)<1000) )){
+		if(not( (devi>= -2 && devi<=3) and (abs(cmdi)<1000) and duri>0)){
 			continue;
 		}
 
@@ -189,30 +170,31 @@ int main(int argc, char *argv[])
 		case -1:
 			break;
 		case 1:
-			commandL(cmdi);
+			commandL(cmdi,duri);
 			break;
 		case 2:
-			commandR(cmdi);
+			commandR(cmdi,duri);
 			break;
 		case 3:
-			commandC(cmdi);
+			commandC(cmdi,duri);
 			break;
 		default:
-			cout << "Command not handled." << endl;
+			cerr << "Command not handled: " << devi << endl;
 		}
 
 		// Exit if -1.
 		if(devi == -1){
-			cout << "Disconnecting...";
+			if(verbose>0){
+				cout << "Disconnecting...";
+			}
 			disconnect();
-			cout << "done. Exiting." << endl;
+			if(verbose>0){
+				cout << "done. Exiting." << endl;
+			}
 			return 0;
 		}
 
-		sleepms(5);
+		sleepms(10);
 	}
 
-}
-
-void run(){
 }
