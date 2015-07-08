@@ -1,9 +1,9 @@
 CC=g++
 
 
-all: sample
+all: actionbot
 
-sample: RoboteqDevice.o sample.o
+actionbot: RoboteqDevice.o actionbot.o
 	$(CC) -o $@ $^
 
 %.o: %.cpp
