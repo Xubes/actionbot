@@ -80,7 +80,7 @@ void disconnect(){
 
 int main(int argc, char *argv[])
 {
-	int verbose = 0;
+	int verbose = 1;
 
 	string response = "";
 
@@ -100,40 +100,51 @@ int main(int argc, char *argv[])
 		devnameChair = argv[3];
 	}
 
-	if(verbose>0){
-		cout << "Opening left motor...";
-	}
-	int status = deviceLeft.Connect(devnameLeft);
-	if(status != RQ_SUCCESS){
-		cerr<<"Error connecting to device " << devnameLeft << ": "<<status<<"."<<endl;
-		//return 1;
-	}
-	if(verbose>0){
-		cout << "done.\nOpening right motor...";
+
+	if(devnameLeft != " "){
+		if(verbose>0){
+			cout << "Opening left motor...";
+		}
+
+		int status = deviceLeft.Connect(devnameLeft);
+		if(status != RQ_SUCCESS){
+			cerr<<"Error connecting to device " << devnameLeft << ": "<<status<<"."<<endl;
+			//return 1;
+		}
 	}
 
 
-	status = deviceRight.Connect(devnameRight);
-	if(status != RQ_SUCCESS)
-	{
-		cerr << "Error connecting to device " << devnameRight << ": " << status << "."<<endl;
-		//return 1;
+	if(devnameRight != " "){
+		if(verbose>0){
+			cout << "done.\nOpening right motor...";
+		}
+
+		int status = deviceRight.Connect(devnameRight);
+		if(status != RQ_SUCCESS)
+		{
+			cerr << "Error connecting to device " << devnameRight << ": " << status << "."<<endl;
+			//return 1;
+		}
 	}
-	if(verbose>0){
-		cout << "done.\nOpening chair motor...";
-	}
-	status = deviceChair.Connect(devnameChair);
-	if(status != RQ_SUCCESS){
-		cerr << "Error connecting to device " << devnameChair << ": " << status << "."<<endl;
-		//return 1;
-	}
-	if(verbose>0){
-		cout << "done.\n";
+
+	if(devnameChair != " "){
+		if(verbose>0){
+			cout << "done.\nOpening chair motor...";
+		}
+
+		int status = deviceChair.Connect(devnameChair);
+		if(status != RQ_SUCCESS){
+			cerr << "Error connecting to device " << devnameChair << ": " << status << "."<<endl;
+			//return 1;
+		}
+		if(verbose>0){
+			cout << "done.\n";
+		}
 	}
 
 	// Read in input from cin and process commands out to devices.
 	while(1){
-		if(verbose>0){
+		if(verbose>1){
 			cout << "Enter command: <device> <[-999,999]> <duration>." << endl;
 		}
 
@@ -156,7 +167,7 @@ int main(int argc, char *argv[])
 			//cmdi = -1;
 		}
 
-		if(verbose>0){
+		if(verbose>2){
 			cout << "Read : " << devi << "," << cmdi << "," << duri << endl;
 		}
 
