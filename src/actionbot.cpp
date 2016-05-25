@@ -14,6 +14,10 @@
 
 using namespace std;
 
+static char* COMMAND_DELIMITER = " ";
+static int MAX_COMMAND_LINE_LENGTH = 32;
+static int DEFAULT_SLEEP_MS = 10;
+
 // Roboteq Devices
 RoboteqDevice deviceLeft, deviceRight, deviceChair;
 
@@ -76,6 +80,11 @@ void disconnect(){
 		deviceRight.Disconnect();
 	if(deviceChair.IsConnected())
 		deviceChair.Disconnect();
+}
+
+/* Busy block. */
+void busyBlock(int ms){
+	sleepms(ms);
 }
 
 int main(int argc, char *argv[])
@@ -149,23 +158,43 @@ int main(int argc, char *argv[])
 		}
 
 		string devs, cmds, durs;
-		cin >> devs;
-		cin >> cmds;
-		cin >> durs;
+		char* line;
 		int devi, cmdi, duri;
-		try{
-			devi = stoi(devs);
-			cmdi = stoi(cmds);
-			duri = stoi(durs);
-		}
-		catch(...){
-			if(verbose>0){
-				printf("Failed to parse: %s,%s,%s\n",devs.c_str(),cmds.c_str(),durs.c_str());
+		if( !( cin.readline(&line, MAX_COMMAND_LINE_LENGTH))){
+			try{
+				devi = stoi(strtok(line, COMMAND_DELIMITER));
+				cmdi = stoi(strtok(line, COMMAND_DELIMITER));
+				duri = stoi(strtok(line, COMMAND_DELIMITER));
 			}
-			continue;
-			//devi = -1;
-			//cmdi = -1;
+			catch(...){
+				if(verbose)
+					printf("Failed to parse: %s", *line);
+				busyBlock(DEFAULT_SLEEP_MS);
+				continue;
+			}
 		}
+		else{
+			busyBlock(DEFAULT_SLEEP_MS);
+			continue;
+		}
+
+//		cin >> devs;
+//		cin >> cmds;
+//		cin >> durs;
+//
+//		try{
+//			devi = stoi(devs);
+//			cmdi = stoi(cmds);
+//			duri = stoi(durs);
+//		}
+//		catch(...){
+//			if(verbose>0){
+//				printf("Failed to parse: %s,%s,%s\n",devs.c_str(),cmds.c_str(),durs.c_str());
+//			}
+//			continue;
+//			//devi = -1;
+//			//cmdi = -1;
+//		}
 
 		if(verbose>2){
 			cout << "Read : " << devi << "," << cmdi << "," << duri << endl;
