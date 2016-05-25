@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <exception>
+#include <vector>
 
 
 #include "RoboteqDevice.h"
@@ -14,13 +15,21 @@
 
 using namespace std;
 
-static char* COMMAND_DELIMITER = " ";
-static int MAX_COMMAND_LINE_LENGTH = 32;
-static int DEFAULT_SLEEP_MS = 10;
+const char* COMMAND_DELIMITER = " ";
+const int DEFAULT_SLEEP_MS = 10;
+
+/* Busy block. */
+void busyBlock(int ms){
+	sleepms(ms);
+}
+void bb(){
+	busyBlock(DEFAULT_SLEEP_MS);
+}
 
 // Roboteq Devices
 RoboteqDevice deviceLeft, deviceRight, deviceChair;
 
+//TODO: implement duration
 bool commandL(int cmd, int dur){
 	try{
 		int result0 = deviceLeft.SetCommand(_GO,0,cmd);
@@ -36,6 +45,7 @@ bool commandL(int cmd, int dur){
 	return true;
 }
 
+//TODO: implement duration
 bool commandR(int cmd, int dur){
 	try{
 		int result0 = deviceRight.SetCommand(_GO,0,cmd);
@@ -67,28 +77,26 @@ bool commandC(int cmd, int dur){
 			cout << "Command (" << cmd << ") to chair motor failed." << endl;
 			return false;
 		}
-		sleepms(10);
+		bb();
 	}
 	return true;
 }
 
 /* Disconnect motors if they are connected. */
 void disconnect(){
+	cout << "Disconnecting from controllers...";
 	if(deviceLeft.IsConnected())
 		deviceLeft.Disconnect();
 	if(deviceRight.IsConnected())
 		deviceRight.Disconnect();
 	if(deviceChair.IsConnected())
 		deviceChair.Disconnect();
-}
-
-/* Busy block. */
-void busyBlock(int ms){
-	sleepms(ms);
+	cout << "done." << endl;
 }
 
 int main(int argc, char *argv[])
 {
+	atexit(disconnect); // disconnect devices before terminating.
 	int verbose = 1;
 
 	string response = "";
@@ -152,30 +160,42 @@ int main(int argc, char *argv[])
 	}
 
 	// Read in input from cin and process commands out to devices.
+	cout << "Enter command: <device> <[-999,999]> <duration>." << endl;
+	cout.flush();
 	while(1){
 		if(verbose>1){
 			cout << "Enter command: <device> <[-999,999]> <duration>." << endl;
 		}
 
 		string devs, cmds, durs;
-		char* line;
+		string line;
 		int devi, cmdi, duri;
-		if( !( cin.readline(&line, MAX_COMMAND_LINE_LENGTH))){
+		if( getline(std::cin, line) ){
 			try{
-				devi = stoi(strtok(line, COMMAND_DELIMITER));
-				cmdi = stoi(strtok(line, COMMAND_DELIMITER));
-				duri = stoi(strtok(line, COMMAND_DELIMITER));
+				vector<char> temp(line.begin(), line.end());
+				temp.push_back('\0');
+				char * temp2 = temp[0];
+				devi = stoi(strtok(temp2, COMMAND_DELIMITER));
+				cmdi = stoi(strtok(temp2, COMMAND_DELIMITER));
+				duri = stoi(strtok(temp2, COMMAND_DELIMITER));
 			}
 			catch(...){
 				if(verbose)
-					printf("Failed to parse: %s", *line);
+					printf("Failed to parse: %s", line.c_str());
 				busyBlock(DEFAULT_SLEEP_MS);
 				continue;
 			}
 		}
 		else{
-			busyBlock(DEFAULT_SLEEP_MS);
-			continue;
+			if(cin.fail()){
+				cout << "Failed to read input." << endl;
+				busyBlock(DEFAULT_SLEEP_MS);
+				continue;
+			}
+			if(cin.eof()){
+				cout << "End of input reached. Exiting." << endl;
+				exit(0);
+			}
 		}
 
 //		cin >> devs;
@@ -202,6 +222,7 @@ int main(int argc, char *argv[])
 
 
 		if(not( (devi>= -2 && devi<=3) and (abs(cmdi)<1000) and duri>0)){
+			busyBlock(DEFAULT_SLEEP_MS);
 			continue;
 		}
 
@@ -224,17 +245,10 @@ int main(int argc, char *argv[])
 
 		// Exit if -1.
 		if(devi == -1){
-			if(verbose>0){
-				cout << "Disconnecting...";
-			}
-			disconnect();
-			if(verbose>0){
-				cout << "done. Exiting." << endl;
-			}
-			return 0;
+			exit(0);
 		}
 
-		sleepms(10);
+		busyBlock(DEFAULT_SLEEP_MS);
 	}
 
 }
