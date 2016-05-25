@@ -3,3 +3,5 @@
 actionbot
 /Default/
 .cproject
+.autotools
+.project
